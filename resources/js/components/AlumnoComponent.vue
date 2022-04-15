@@ -3,7 +3,7 @@
             <div class="card text-white" id="carAlumno">
                 <div class="card-header bg-primary">
                     Registro de Alumnos
-                    <button type="button" class="btn-close text-end" data-bs-dismiss="alert" data-bs-target="#carAlumno" aria-label="Close"></button>
+                    <button type="button" class="btn-close text-end" @click="cerrarForm"></button>
                 </div>
                 <div class="card-body text-dark">
                     <form method="post" @submit.prevent="guardarAlumno" @reset="nuevoAlumno">
@@ -96,6 +96,7 @@
 
 <script>
     export default {
+        props : ['form'],
        data:()=>{
         return {
             buscar:'',
@@ -114,6 +115,10 @@
         }
     },
     methods:{
+        cerrarForm(){
+            this.form['alumno'].mostrar = false;
+
+        },
         async sincronizarDatosServidor(alumno, metodo, url){
             await axios({
                 method : metodo,
@@ -121,11 +126,27 @@
                 data : alumno
             })
             .then(resp=>{
+                if(alumno.accion=='nuevo'){
+                    alumno.id = resp.data.id;
+                    this.insertarLocal(alumno);//actualizar el id del alumno que se genero en el servidor con laravel y mysql
+                }
                 this.alumno.msg = `Alumno procesado ${data.msg}`;
             })
             .catch(err=>{
                 this.alumno.msg = `Error al procesar el alumno ${err}`;
             })
+        },
+        insertarLocal(alumno){
+             let store = this.abrirStore('alumno', 'readwrite');
+                query = store.put(alumno);
+            query.onsuccess = e=>{ 
+                this.nuevoAlumno();
+                this.obtenerDatos();
+                this.alumno.msg = 'Alumno procesado con exito';
+            };
+            query.onerror = e=>{
+                this.alumno.msg = `Error al procesar el alumno ${e.target.error}`;
+            };
         },
         buscandoAlumno(){
             this.obtenerDatos(this.buscar);
@@ -136,7 +157,7 @@
                 let store = this.abrirStore('alumno', 'readwrite'),
                    query = store.delete(alumno.idAlumno),
                    metodo = 'DELETE',
-                   url = `/alumno/${alumno.idAlumno}`;
+                   url = `/alumno/${alumno.id}`;
                 this.sincronizarDatosServidor(alumno, metodo, url);
                 query.onsuccess = e=>{
                     this.nuevoAlumno();
@@ -155,23 +176,15 @@
         },
         guardarAlumno(){
             let metodo = 'PUT',
-                url = `/alumno/${this.alumno.idAlumno}`;
+                url = `/alumno/${this.alumno.id}`;
             if(this.alumno.accion=="nuevo"){
                 this.alumno.idAlumno = generarIdUnicoFecha();
                 metodo = 'POST';
                 url = '/alumno';
             }
-            this.sincronizarDatosServidor(this.alumno, metodo, url);
-            let store = this.abrirStore('alumno', 'readwrite');
-                query = store.put(this.alumno);
-            query.onsuccess = e=>{ 
-                this.nuevoAlumno();
-                this.obtenerDatos();
-                this.alumno.msg = 'Alumno procesado con exito';
-            };
-            query.onerror = e=>{
-                this.alumno.msg = `Error al procesar el alumno ${e.target.error}`;
-            };
+            let alumno = JSON.parse(JSON.stringify(this.alumno));
+            this.sincronizarDatosServidor(alumno, metodo, url);
+            this.insertarLocal(alumno);
         },
         obtenerDatos(valor=''){
             let store = this.abrirStore('alumno', 'readonly'),

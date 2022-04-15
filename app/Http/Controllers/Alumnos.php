@@ -36,7 +36,7 @@ class Alumnos extends Controller
     public function store(Request $request)//POST
     {
         $id = Alumno::create($request->all())->id;//insert into alumno...
-        return response()->json($id, 200);
+        return response()->json(['id'=>$id], 200);
     }
 
     /**
@@ -71,7 +71,7 @@ class Alumnos extends Controller
     public function update(Request $request, alumno $alumno)//PUT
     {
         $alumno->update($request->all());//update alumno set... where id = $id
-        return response()->json($request->id, 200);
+        return response()->json(['id'=>$request->id], 200);
     }
 
     /**
@@ -83,6 +83,6 @@ class Alumnos extends Controller
     public function destroy(alumno $alumno)//DELETE
     {
         $alumno->delete();//delete from alumno where id = $id
-        return response()->json($alumno->id, 204);
+        return response()->json(['id'=>$alumno->id], 200);
     }
 }
